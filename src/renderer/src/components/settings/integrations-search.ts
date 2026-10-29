@@ -221,5 +221,33 @@ export const getIntegrationsPaneSearchEntries = createLocalizedCatalog(() => [
         'disconnect'
       )
     ]
+  },
+  {
+    title: translate(
+      'auto.components.settings.integrations.search.omniroute',
+      'OmniRoute Integration'
+    ),
+    description: translate(
+      'auto.components.settings.integrations.search.omnirouteDescription',
+      'Inspect configured OmniRoute deployments with read-only health, model catalog and rate-limit requests.'
+    ),
+    keywords: [
+      ...translateSearchKeyword(
+        'auto.components.settings.integrations.search.omnirouteKeyword',
+        'omniroute'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.integrations.search.omnirouteStatus',
+        'model catalog'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.integrations.search.omnirouteHealth',
+        'rate limits'
+      ),
+      ...translateSearchKeyword(
+        'auto.components.settings.integrations.search.omnirouteIntegration',
+        'integration'
+      )
+    ]
   }
 ])

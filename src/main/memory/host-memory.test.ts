@@ -77,7 +77,11 @@ describe('host memory', () => {
       memoryUsagePercent: 90
     })
     expect(second.availableMemorySource).toBe('free-memory')
-    expect(runProcessMock).toHaveBeenCalledTimes(1)
+    expect(
+      runProcessMock.mock.calls.filter(
+        ([options]) => options?.program === '/usr/bin/memory_pressure'
+      )
+    ).toHaveLength(1)
   })
 
   it('uses Linux MemAvailable and keeps the value within physical RAM', async () => {
@@ -105,8 +109,73 @@ describe('host memory', () => {
 
     expect(host.availableMemory).toBe(100)
     expect(host.availableMemorySource).toBe('free-memory')
-    expect(runProcessMock).not.toHaveBeenCalled()
+    expect(host.gpu).toEqual({
+      utilizationPercent: null,
+      memoryUsed: null,
+      memoryTotal: null,
+      source: 'unavailable'
+    })
+    expect(runProcessMock).toHaveBeenCalledWith(expect.objectContaining({ program: 'nvidia-smi' }))
     expect(readFileMock).not.toHaveBeenCalled()
+  })
+
+  it('calculates whole-host CPU utilization from successive OS samples', async () => {
+    vi.spyOn(os, 'platform').mockReturnValue('linux')
+    const cpuSamples: ReturnType<typeof os.cpus>[] = [
+      [{ model: 'test', speed: 0, times: { user: 50, nice: 0, sys: 50, idle: 900, irq: 0 } }],
+      [
+        {
+          model: 'test',
+          speed: 0,
+          times: { user: 100, nice: 0, sys: 100, idle: 1_000, irq: 0 }
+        }
+      ]
+    ]
+    vi.spyOn(os, 'cpus').mockImplementation(() => cpuSamples.shift() ?? [])
+    runProcessMock.mockResolvedValue({
+      code: 1,
+      signal: null,
+      stdout: '',
+      stderr: '',
+      timedOut: false
+    })
+    const { collectHostMemory } = await loadHostMemory()
+
+    expect((await collectHostMemory()).cpuUsagePercent).toBeNull()
+    expect((await collectHostMemory()).cpuUsagePercent).toBe(50)
+  })
+
+  it('exposes GPU utilization and memory only from parsed NVIDIA telemetry', async () => {
+    const { parseNvidiaSmiMetrics } = await loadHostMemory()
+
+    expect(parseNvidiaSmiMetrics('25, 1024, 8192\n75, 2048, 8192\n')).toEqual({
+      utilizationPercent: 50,
+      memoryUsed: 3 * 1024 * 1024 * 1024,
+      memoryTotal: 16 * 1024 * 1024 * 1024,
+      source: 'nvidia-smi'
+    })
+    expect(parseNvidiaSmiMetrics('N/A, N/A, N/A')).toBeNull()
+  })
+
+  it('uses the NVIDIA provider when it returns a valid host sample', async () => {
+    vi.spyOn(os, 'platform').mockReturnValue('linux')
+    runProcessMock.mockResolvedValue({
+      code: 0,
+      signal: null,
+      stdout: '42, 1024, 4096\n',
+      stderr: '',
+      timedOut: false
+    })
+    const { collectHostMemory } = await loadHostMemory()
+
+    const host = await collectHostMemory()
+
+    expect(host.gpu).toEqual({
+      utilizationPercent: 42,
+      memoryUsed: 1024 * 1024 * 1024,
+      memoryTotal: 4 * 1024 * 1024 * 1024,
+      source: 'nvidia-smi'
+    })
   })
 })
 

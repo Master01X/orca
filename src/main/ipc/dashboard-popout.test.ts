@@ -10,6 +10,7 @@ const {
   isPopoutRendererMock,
   isTrustedUIRendererMock,
   getTrustedWindowMock,
+  screenMock,
   sendToTrustedMock,
   safelyRevealMock
 } = vi.hoisted(() => {
@@ -21,6 +22,17 @@ const {
       handle: (channel: string, fn: (...args: unknown[]) => unknown) => map.set(channel, fn)
     },
     appMock: { focus: vi.fn() },
+    screenMock: {
+      on: vi.fn(),
+      getPrimaryDisplay: vi.fn(() => ({
+        id: 1,
+        workArea: { x: 0, y: 0, width: 1920, height: 1080 }
+      })),
+      getAllDisplays: vi.fn(() => [
+        { id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
+        { id: 2, workArea: { x: 1920, y: 0, width: 1920, height: 1080 } }
+      ])
+    },
     createPopoutMock: vi.fn(),
     closePopoutMock: vi.fn(),
     getPopoutMock: vi.fn((): unknown => null),
@@ -32,7 +44,7 @@ const {
   }
 })
 
-vi.mock('electron', () => ({ app: appMock, ipcMain: ipcMainMock }))
+vi.mock('electron', () => ({ app: appMock, ipcMain: ipcMainMock, screen: screenMock }))
 vi.mock('../window/dashboard-popout-window', () => ({
   createOrFocusDashboardPopout: createPopoutMock,
   closeDashboardPopout: closePopoutMock,
@@ -84,7 +96,9 @@ function makeStore(enabled = true) {
     | ((updates: Record<string, unknown>, settings: Record<string, unknown>) => void)
     | null = null
   return {
-    getSettings: vi.fn(() => ({ experimentalAgentDashboardPopout: enabled })),
+    getSettings: vi.fn((): Record<string, unknown> => ({
+      experimentalAgentDashboardPopout: enabled
+    })),
     onSettingsChanged: vi.fn((listener) => {
       settingsListener = listener
       return vi.fn()
@@ -93,6 +107,11 @@ function makeStore(enabled = true) {
       settingsListener?.(
         { experimentalAgentDashboardPopout: nextEnabled },
         { experimentalAgentDashboardPopout: nextEnabled }
+      ),
+    fireOrcaModeEnabled: () =>
+      settingsListener?.(
+        { orcaModeEnabled: true },
+        { experimentalAgentDashboardPopout: true, orcaModeEnabled: true }
       )
   }
 }
@@ -134,6 +153,26 @@ describe('registerDashboardPopoutHandlers', () => {
     handlers.get('dashboardPopout:open')!({ sender: mainSender } as never)
     expect(createPopoutMock).toHaveBeenCalledWith(store, {
       getKeybindings: expect.any(Function)
+    })
+  })
+
+  it('keeps the workspace on primary and places the dashboard on the secondary display in Orca Mode', () => {
+    const mainWindow = { isDestroyed: () => false, setBounds: vi.fn() }
+    getTrustedWindowMock.mockReturnValue(mainWindow)
+    store.getSettings.mockReturnValue({
+      experimentalAgentDashboardPopout: true,
+      orcaModeEnabled: true
+    })
+    store.fireOrcaModeEnabled()
+
+    expect(mainWindow.setBounds).toHaveBeenCalledWith({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080
+    })
+    expect(createPopoutMock).toHaveBeenCalledWith(store, {
+      dashboardDisplayBounds: { x: 1920, y: 0, width: 1920, height: 1080 }
     })
   })
 

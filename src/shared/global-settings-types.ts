@@ -193,6 +193,8 @@ export type GlobalSettings = GlobalSettingsBase & {
   electronHttp1CompatibilityMode?: boolean
   /** Opt-in in-app browsing (isolated guest surface); default keeps links opening in the system browser. */
   openLinksInApp: boolean
+  /** Opt-in Orca Mode: prefer internal browsing, confirmed graceful app cleanup, and a dual-display dashboard layout. */
+  orcaModeEnabled?: boolean
   /** Worktree-scoped localhost hostnames to distinguish tabs; opt-in since a non-localhost host can break apps binding cookies/sessions to localhost. */
   localhostWorktreeLabelsEnabled?: boolean
   /** Tracks the one-time first-use prompt for terminal link routing (avoid silently changing where links open). */

@@ -18,6 +18,10 @@ import { AgentDashboardSettingsMenu } from './AgentDashboardSettingsMenu'
 import { useLiveDashboardSnapshot } from './useLiveDashboardSnapshot'
 import { useAgentDashboardTelemetry } from '../dashboard-popout/use-agent-dashboard-telemetry'
 import { translate } from '@/i18n/i18n'
+import { runtimeTargetForWorktreeOwner } from '@/store/slices/worktrees/listing/worktree-owner-target'
+import { createMultiAgentTask, type DashboardCollaborationRun } from './multiagent-task'
+import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
+import type { DashboardCard } from '../../../../shared/dashboard-snapshot'
 
 // Nested interactive overlays own Escape before the companion sheet; exclude the sheet’s own role=dialog marker.
 const AGENT_BOARD_ESCAPE_BLOCKING_OVERLAY_SELECTOR = [
@@ -64,6 +68,41 @@ function AgentDashboardDrawerBody({
     void window.api.dashboard.openPopout?.()
   }, [onFocusHandoff])
 
+  const handleCreateTask = useCallback(
+    ({ card, objective }: { card: DashboardCard; objective: string }) =>
+      createMultiAgentTask({
+        card,
+        objective,
+        target: runtimeTargetForWorktreeOwner(
+          useAppStore.getState(),
+          card.worktreeId,
+          card.executionHostId
+        )
+      }),
+    []
+  )
+  const handleResolveCurrentRun = useCallback(
+    async (card: DashboardCard): Promise<DashboardCollaborationRun | null> => {
+      const target = runtimeTargetForWorktreeOwner(
+        useAppStore.getState(),
+        card.worktreeId,
+        card.executionHostId
+      )
+      const { terminal } = await callRuntimeRpc<{ terminal: string }>(
+        target,
+        'terminal.resolvePane',
+        { paneKey: card.paneKey, worktreeId: card.worktreeId }
+      )
+      const { run } = await callRuntimeRpc<{ run: { id: string } | null }>(
+        target,
+        'orchestration.runCurrent',
+        { from: terminal }
+      )
+      return run ? { paneKey: card.paneKey, runId: run.id, terminalHandle: terminal, target } : null
+    },
+    []
+  )
+
   return (
     <AgentKanbanBoard
       snapshot={snapshot}
@@ -71,6 +110,8 @@ function AgentDashboardDrawerBody({
       containerClassName="h-full w-full bg-transparent"
       onAckAgent={handleAckAgent}
       onRevealAgent={handleRevealAgent}
+      onCreateTask={handleCreateTask}
+      onResolveCurrentRun={handleResolveCurrentRun}
       onClose={onClose}
       headerActions={
         <AgentDashboardSettingsMenu

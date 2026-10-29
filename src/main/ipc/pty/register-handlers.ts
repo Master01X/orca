@@ -68,6 +68,7 @@ import {
 } from './host-env/codex-resume'
 import { ensureLinuxTerminalOrcaCliShimDir } from '../../cli/linux-terminal-orca-cli-shim'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
+import { CustomAgentProfileStore } from '../../custom-agents/custom-agent-profile-store'
 
 export function registerPtyHandlers(
   mainWindow?: PtyRendererDelivery,
@@ -78,6 +79,7 @@ export function registerPtyHandlers(
   store?: Store,
   options?: PtyIpcSessionOptions
 ): void {
+  const customAgentProfiles = new CustomAgentProfileStore(getAppEnvironment().getPath('userData'))
   if (process.platform === 'linux') {
     const appEnvironment = getAppEnvironment()
     if (appEnvironment.isPackaged()) {
@@ -283,6 +285,7 @@ export function registerPtyHandlers(
     getSettings,
     getSelectedCodexHomePath,
     prepareClaudeAuth,
+    getCustomAgentLaunchProfile: (agent) => customAgentProfiles.getLaunchProfile(agent),
     options,
     getLocalPtyStartupPromise,
     adoptStablePane: adoptStablePaneBound,

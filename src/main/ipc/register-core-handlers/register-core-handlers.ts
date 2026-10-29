@@ -15,6 +15,8 @@ import { registerGitLabHandlers } from '../gitlab'
 import { registerHostedReviewHandlers } from '../hosted-review'
 import { registerLinearHandlers } from '../linear/register-handlers'
 import { registerJiraHandlers } from '../jira/register-handlers'
+import { registerOmniRouteHandlers } from '../omniroute'
+import { registerCustomAgentProfileHandlers } from '../custom-agent-profiles'
 import { registerJiraIssueSummaryGenerationHandlers } from '../jira/issue-summary-generation'
 import { registerBitbucketHandlers } from '../bitbucket'
 import { registerFeedbackHandlers } from '../feedback'
@@ -198,6 +200,8 @@ export function registerCoreHandlers(
   registerHostedReviewHandlers(store, stats)
   registerLinearHandlers()
   registerJiraHandlers()
+  registerOmniRouteHandlers()
+  registerCustomAgentProfileHandlers()
   registerJiraIssueSummaryGenerationHandlers(store, commitMessageAgentEnv)
   registerBitbucketHandlers()
   registerFeedbackHandlers()

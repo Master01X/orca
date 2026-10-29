@@ -184,6 +184,45 @@ describe('AgentKanbanBoard', () => {
     expect(screen.getByText('3 total')).toBeTruthy()
   })
 
+  it('shows live agent states, workspace workflows, latest messages, and delegation in flow view', () => {
+    renderBoard([
+      card({
+        paneKey: 'parent',
+        task: 'Coordinate release',
+        lastUserMessage: 'Build the release',
+        lastAgentMessage: 'Build is running'
+      }),
+      card({
+        paneKey: 'child',
+        task: 'Run checks',
+        parentPaneKey: 'parent',
+        bucket: 'attention',
+        dotState: 'blocked',
+        lastUserMessage: 'Run checks',
+        lastAgentMessage: 'Waiting for approval'
+      })
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Live flow' }))
+
+    expect(screen.getByRole('region', { name: 'Live agent metrics' })).toBeInTheDocument()
+    const metrics = screen.getByRole('region', { name: 'Live agent metrics' })
+    expect(within(metrics).getByText('Active agents')).toBeInTheDocument()
+    expect(within(metrics).getByText('Needs attention')).toBeInTheDocument()
+    expect(within(metrics).getByText('Active workspaces')).toBeInTheDocument()
+    const workspace = screen.getByRole('region', { name: 'Repo / wt' })
+    expect(within(workspace).getByText('Build the release')).toBeInTheDocument()
+    expect(within(workspace).getByText('Build is running')).toBeInTheDocument()
+    const delegation = within(workspace).getByLabelText('Known delegation paths')
+    expect(delegation).toHaveTextContent('Coordinate release')
+    expect(delegation).toHaveTextContent('Run checks')
+    expect(within(workspace).getByText('Waiting for approval')).toBeInTheDocument()
+
+    fireEvent.click(within(workspace).getByRole('button', { name: /Run checks/ }))
+    expect(screen.getByTestId('terminal-dialog')).toHaveAttribute('data-open', 'true')
+    expect(ackAgent).toHaveBeenCalledWith('child', 'explicit')
+  })
+
   it('leaves every column border neutral now that cards carry the state color', () => {
     renderBoard([card({ bucket: 'attention' })])
     for (const column of document.querySelectorAll('section')) {

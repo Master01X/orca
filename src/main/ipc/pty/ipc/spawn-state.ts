@@ -21,6 +21,7 @@ import type { ReplacedPaneOwner } from '../pane/replaced-pane-owner'
 import { localProvider } from '../provider/registry'
 import type { AdoptStablePaneResult, PtySpawnIpcArgs, PtySpawnIpcDeps } from './spawn-types'
 import type { PaneAgentLaunch } from './spawn-agent-launch-end'
+import type { CustomAgentLaunchProfile } from '../../../../shared/custom-agent-profiles'
 
 export type PtyIpcSpawnState = {
   deps: PtySpawnIpcDeps
@@ -54,6 +55,7 @@ export type PtyIpcSpawnState = {
   provider: IPtyProvider
   preAdoptedStablePane: AdoptStablePaneResult | null
   paneAgentLaunch: PaneAgentLaunch | null
+  customAgentLaunchProfile: CustomAgentLaunchProfile | null
   isClaudeLaunch: boolean
   claudeAuth: ClaudeRuntimeAuthPreparation | null
   terminalRuntimeOptions: {
@@ -135,6 +137,7 @@ export function createPtyIpcSpawnState(
     provider: localProvider,
     preAdoptedStablePane: null,
     paneAgentLaunch: null,
+    customAgentLaunchProfile: null,
     isClaudeLaunch: false,
     claudeAuth: null,
     terminalRuntimeOptions: {},

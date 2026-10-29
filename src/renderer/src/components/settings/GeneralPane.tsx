@@ -123,6 +123,36 @@ export function GeneralPane({
         <SettingsSubsectionHeader
           title={translate('auto.components.settings.GeneralPane.d58fccfd84', 'Navigation')}
         />
+        <SearchableSetting
+          title={translate('auto.components.settings.orcaMode.title', 'Orca Mode')}
+          description={translate(
+            'auto.components.settings.orcaMode.description',
+            'Routes ordinary local web links inside Orca and puts the live dashboard on a secondary display. On Windows, Orca asks once before force-closing visible external apps in your session; unsaved work can be lost. Orca and protected system processes are excluded.'
+          )}
+          keywords={[
+            'orca mode',
+            'dual monitor',
+            'multi-monitor',
+            'internal browser',
+            'resource optimization'
+          ]}
+        >
+          <SettingsSwitchRow
+            label={translate('auto.components.settings.orcaMode.title', 'Orca Mode')}
+            description={translate(
+              'auto.components.settings.orcaMode.description',
+              'Routes ordinary local web links inside Orca and puts the live dashboard on a secondary display. On Windows, Orca asks once before force-closing visible external apps in your session; unsaved work can be lost. Orca and protected system processes are excluded.'
+            )}
+            checked={settings.orcaModeEnabled === true}
+            onChange={() => {
+              const enabled = settings.orcaModeEnabled !== true
+              updateSettings({
+                orcaModeEnabled: enabled,
+                ...(enabled ? { experimentalAgentDashboardPopout: true } : {})
+              })
+            }}
+          />
+        </SearchableSetting>
         <RecentTabOrderControl
           ctrlTabOrderMode={settings.ctrlTabOrderMode ?? 'mru'}
           keywords={tabOrderKeywords}

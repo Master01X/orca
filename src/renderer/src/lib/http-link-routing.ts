@@ -60,6 +60,7 @@ export type HttpLinkStoreState = HttpLinkBrowserTabState & {
       GlobalSettings,
       | 'openLinksInAppInBackground'
       | 'openLinksInApp'
+      | 'orcaModeEnabled'
       | 'openLinksInAppModifierInverts'
       | 'activeRuntimeEnvironmentId'
       | 'localhostWorktreeLabelsEnabled'
@@ -215,9 +216,9 @@ function executeHttpLink(
   const sourceIsLocal = effectiveSourceOwner
     ? effectiveSourceOwner.kind === 'local'
     : !remoteRuntimeActive
-  const openLinksInApp = state?.settings?.openLinksInApp === true
+  const openLinksInApp = !!(state?.settings?.orcaModeEnabled || state?.settings?.openLinksInApp)
   const modifier = resolveModifierRouting(
-    Boolean(opts.modifierHeld),
+    Boolean(opts.modifierHeld) && state?.settings?.orcaModeEnabled !== true,
     openLinksInApp,
     state?.settings?.openLinksInAppModifierInverts === true
   )
@@ -317,11 +318,8 @@ export async function resolveLocalhostHttpLinkDisplayUrl(
   sourceOwner?: HttpLinkSourceOwner
 ): Promise<string | null> {
   const state = storeAccessor?.()
-  if (!state) {
-    return null
-  }
   // Resolve hover and click through the same route so remote loopback cannot borrow a local workspace label.
-  const localhostRoute = localhostLabelRouteForHttpLink(url, state, sourceOwner)
+  const localhostRoute = state ? localhostLabelRouteForHttpLink(url, state, sourceOwner) : null
   if (!localhostRoute) {
     return null
   }

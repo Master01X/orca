@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, screen } from 'electron'
 import type { Store } from '../persistence'
 import type { KeybindingService } from '../keybindings/keybinding-service'
 import type { DashboardSnapshot } from '../../shared/dashboard-snapshot'
@@ -20,15 +20,45 @@ import {
 
 // Replay immediately on mount; clear on close to avoid showing a previous session.
 let lastSnapshot: DashboardSnapshot | null = null
+let displayListenersRegistered = false
+let dashboardHandlersStore: Store | null = null
 
 function isDashboardEnabled(store: Store): boolean {
   return store.getSettings().experimentalAgentDashboardPopout === true
+}
+
+function syncOrcaModeDisplayLayout(store: Store): void {
+  const settings = store.getSettings()
+  if (settings.orcaModeEnabled !== true || !isDashboardEnabled(store)) {
+    return
+  }
+  const primary = screen.getPrimaryDisplay()
+  const mainWindow = getTrustedUIRendererWindow()
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setBounds(primary.workArea)
+  }
+  const secondary = screen.getAllDisplays().find((display) => display.id !== primary.id)
+  createOrFocusDashboardPopout(store, {
+    dashboardDisplayBounds: secondary?.workArea ?? centeredFallbackBounds(primary.workArea)
+  })
+}
+
+function centeredFallbackBounds(workArea: Electron.Rectangle): Electron.Rectangle {
+  const width = Math.min(workArea.width, Math.max(480, Math.round(workArea.width * 0.7)))
+  const height = Math.min(workArea.height, Math.max(360, Math.round(workArea.height * 0.7)))
+  return {
+    x: workArea.x + Math.round((workArea.width - width) / 2),
+    y: workArea.y + Math.round((workArea.height - height) / 2),
+    width,
+    height
+  }
 }
 
 export function registerDashboardPopoutHandlers(
   store: Store,
   keybindings?: KeybindingService
 ): void {
+  dashboardHandlersStore = store
   ipcMain.removeHandler('dashboardPopout:open')
   ipcMain.removeHandler('dashboard:publishSnapshot')
   ipcMain.removeHandler('dashboard:requestSnapshot')
@@ -41,7 +71,25 @@ export function registerDashboardPopoutHandlers(
       lastSnapshot = null
     }
   })
+  if (!displayListenersRegistered) {
+    displayListenersRegistered = true
+    const syncCurrentLayout = (): void => {
+      const currentStore = dashboardHandlersStore
+      if (currentStore?.getSettings().orcaModeEnabled === true) {
+        syncOrcaModeDisplayLayout(currentStore)
+      }
+    }
+    screen.on('display-added', syncCurrentLayout)
+    screen.on('display-removed', syncCurrentLayout)
+    screen.on('display-metrics-changed', syncCurrentLayout)
+  }
+  if (store.getSettings().orcaModeEnabled === true) {
+    void app.whenReady().then(() => syncOrcaModeDisplayLayout(store))
+  }
   store.onSettingsChanged((updates, settings) => {
+    if ('orcaModeEnabled' in updates && settings.orcaModeEnabled === true) {
+      syncOrcaModeDisplayLayout(store)
+    }
     if (
       'experimentalAgentDashboardPopout' in updates &&
       settings.experimentalAgentDashboardPopout !== true
@@ -53,6 +101,10 @@ export function registerDashboardPopoutHandlers(
 
   ipcMain.handle('dashboardPopout:open', (event): void => {
     if (!isTrustedUIRenderer(event.sender) || !isDashboardEnabled(store)) {
+      return
+    }
+    if (store.getSettings().orcaModeEnabled === true) {
+      syncOrcaModeDisplayLayout(store)
       return
     }
     createOrFocusDashboardPopout(store, {

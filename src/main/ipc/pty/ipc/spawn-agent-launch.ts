@@ -112,13 +112,18 @@ export async function planPaneAgentLaunch(ctx: PtyIpcSpawnState): Promise<void> 
   const { intent } = await resolveUnlaunchedIntent(params.data, runtime, null, {
     terminalOnly: true
   })
+  const customProfile = deps.getCustomAgentLaunchProfile?.(intent.agent) ?? null
+  ctx.customAgentLaunchProfile = customProfile
+  const agentArgs = customProfile
+    ? withProfileModel(intent.agentArgs, customProfile.model)
+    : intent.agentArgs
   if (intent.target.kind !== 'existing') {
     throw new Error('agent_launch_request_invalid')
   }
   const launchPreferences = toAgentLaunchPreferences(intent.sessionOptions, intent.agent)
   const planned = await runtime.planAgentPaneLaunch(intent.target.worktree, {
     startupAgent: intent.agent,
-    ...(intent.agentArgs !== undefined ? { agentArgs: intent.agentArgs } : {}),
+    ...(agentArgs !== undefined ? { agentArgs } : {}),
     ...(launchPreferences ? { launchPreferences } : {}),
     ...(intent.launchSource ? { launchSource: intent.launchSource } : {}),
     ...(intent.cwd ? { cwd: intent.cwd } : {}),
@@ -126,4 +131,12 @@ export async function planPaneAgentLaunch(ctx: PtyIpcSpawnState): Promise<void> 
   })
   ctx.paneAgentLaunch.launchRuntime = planned.launchRuntime
   ctx.args = withPlannedLaunch(args, planned)
+}
+
+function withProfileModel(agentArgs: string | null | undefined, model: string): string {
+  const existing = agentArgs?.trim() ?? ''
+  if (/(?:^|\s)--model(?:\s|=)/.test(existing)) {
+    return existing
+  }
+  return `${existing} --model ${model}`.trim()
 }

@@ -122,9 +122,15 @@ function resolveRestoredBounds(store: Store | null): {
 /** Reuse a native-framed companion window with the main preload and its own popout.html renderer. */
 export function createOrFocusDashboardPopout(
   store: Store | null,
-  options: { getKeybindings?: () => KeybindingOverrides | undefined } = {}
+  options: {
+    getKeybindings?: () => KeybindingOverrides | undefined
+    dashboardDisplayBounds?: Electron.Rectangle
+  } = {}
 ): BrowserWindow {
   if (dashboardPopoutWindow && !dashboardPopoutWindow.isDestroyed()) {
+    if (options.dashboardDisplayBounds) {
+      dashboardPopoutWindow.setBounds(options.dashboardDisplayBounds)
+    }
     if (dashboardPopoutWindow.isMinimized()) {
       dashboardPopoutWindow.restore()
     }
@@ -134,7 +140,7 @@ export function createOrFocusDashboardPopout(
     return dashboardPopoutWindow
   }
 
-  const savedBounds = resolveRestoredBounds(store)
+  const savedBounds = options.dashboardDisplayBounds ?? resolveRestoredBounds(store)
 
   const window = new BrowserWindow({
     width: savedBounds?.width ?? DEFAULT_WIDTH,

@@ -13,6 +13,13 @@ export function createEmptyMemorySnapshot(): MemorySnapshot {
       availableMemorySource: 'free-memory',
       usedMemory: 0,
       memoryUsagePercent: 0,
+      cpuUsagePercent: null,
+      gpu: {
+        utilizationPercent: null,
+        memoryUsed: null,
+        memoryTotal: null,
+        source: 'unavailable'
+      },
       cpuCoreCount: navigator.hardwareConcurrency || 1,
       loadAverage1m: 0
     },

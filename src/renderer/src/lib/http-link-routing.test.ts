@@ -32,6 +32,7 @@ function noActiveWorkspace(): {
 
 type LinkTestSettings = {
   openLinksInApp?: boolean
+  orcaModeEnabled?: boolean
   openLinksInAppModifierInverts?: boolean
   openLinksInAppInBackground?: boolean
   openLinksInAppPreferencePrompted?: boolean
@@ -141,6 +142,30 @@ describe('openHttpLink', () => {
       activate: true
     })
     expect(openUrlMock).not.toHaveBeenCalled()
+  })
+
+  it('forces ordinary local links into Orca in Orca Mode, even when a modifier is held', () => {
+    registerWorkspaceHttpLinkBrowserOpener(null)
+    storeState.settings = { orcaModeEnabled: true, openLinksInApp: false }
+
+    openHttpLink('https://example.com/', {
+      worktreeId: 'wt-1',
+      modifierHeld: true
+    })
+
+    expect(createBrowserTabMock).toHaveBeenCalledWith('wt-1', 'https://example.com/', {
+      activate: true
+    })
+    expect(openUrlMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves explicit system-browser actions in Orca Mode', () => {
+    storeState.settings = { orcaModeEnabled: true }
+
+    openHttpLink('https://example.com/', { worktreeId: 'wt-1', forceSystemBrowser: true })
+
+    expect(openUrlMock).toHaveBeenCalledWith('https://example.com/')
+    expect(createBrowserTabMock).not.toHaveBeenCalled()
   })
 
   // Why: #31530 — queued links must not pull focus or the selected workspace away from the source.

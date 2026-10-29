@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { XIcon } from 'lucide-react'
+import { Plus, XIcon } from 'lucide-react'
 import {
   DASHBOARD_BUCKET_ORDER,
   type DashboardBucket,
@@ -13,6 +13,14 @@ import { installWindowVisibilityInterval } from '@/lib/window-visibility-interva
 import { AgentKanbanCard } from './AgentKanbanCard'
 import { AgentDashboardToolbar } from './AgentDashboardToolbar'
 import { AgentTerminalDialog, type AgentRevealArgs } from './AgentTerminalDialog'
+import { MultiAgentTaskDialog } from '../dashboard/MultiAgentTaskDialog'
+import { Button } from '@/components/ui/button'
+import type {
+  DashboardCollaborationMessage,
+  DashboardCollaborationRun
+} from '../dashboard/multiagent-task'
+import { useDashboardCollaboration } from '../dashboard/use-dashboard-collaboration'
+import { LiveAgentFlow } from './LiveAgentFlow'
 import {
   EMPTY_DASHBOARD_FILTERS,
   filterDashboardCards,
@@ -67,13 +75,17 @@ function KanbanColumn({
   cards,
   repoIconsByRepoId,
   now,
-  onOpenTerminal
+  onOpenTerminal,
+  collaborationUpdatesByPaneKey,
+  collaborationErrorsByPaneKey
 }: {
   bucket: DashboardBucket
   cards: DashboardCard[]
   repoIconsByRepoId: Record<string, RepoIcon | null> | undefined
   now: number
   onOpenTerminal: (card: DashboardCard) => void
+  collaborationUpdatesByPaneKey: Record<string, DashboardCollaborationMessage[]>
+  collaborationErrorsByPaneKey: Record<string, string>
 }): React.JSX.Element {
   const label = bucketLabel(bucket)
 
@@ -104,6 +116,8 @@ function KanbanColumn({
               repoIcon={repoIconsByRepoId?.[card.repoId] ?? null}
               now={now}
               onOpenTerminal={onOpenTerminal}
+              collaborationUpdates={collaborationUpdatesByPaneKey[card.paneKey] ?? []}
+              collaborationError={collaborationErrorsByPaneKey[card.paneKey]}
             />
           ))
         )}
@@ -124,6 +138,12 @@ type AgentKanbanBoardProps = {
   onClose?: () => void
   /** In-window settings controls; the pop-out renderer has no store to drive them. */
   headerActions?: React.ReactNode
+  /** Available only in the main window, which can resolve each card to its owning runtime. */
+  onCreateTask?: (args: {
+    card: DashboardCard
+    objective: string
+  }) => Promise<DashboardCollaborationRun>
+  onResolveCurrentRun?: (card: DashboardCard) => Promise<DashboardCollaborationRun | null>
 }
 
 /** Share snapshot-fed status columns across pop-out and in-window hosts with injected routing and sizing. */
@@ -133,7 +153,9 @@ export function AgentKanbanBoard({
   onAckAgent = ackAgentViaPopoutRelay,
   onRevealAgent = revealAgentViaPopoutRelay,
   onClose,
-  headerActions
+  headerActions,
+  onCreateTask,
+  onResolveCurrentRun
 }: AgentKanbanBoardProps): React.JSX.Element {
   const visibleBuckets = useMemo(
     () =>
@@ -145,6 +167,13 @@ export function AgentKanbanBoard({
     [snapshot.cards, visibleBuckets]
   )
   const [query, setQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'board' | 'flow'>('board')
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const {
+    updatesByPaneKey: collaborationUpdatesByPaneKey,
+    errorsByPaneKey: collaborationErrorsByPaneKey,
+    trackRun
+  } = useDashboardCollaboration({ cards: visibleCards, onResolveCurrentRun })
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [filters, setFilters] = useState<DashboardFilters>(EMPTY_DASHBOARD_FILTERS)
   const filteredCards = useMemo(
@@ -163,9 +192,9 @@ export function AgentKanbanBoard({
     }
     return installWindowVisibilityInterval({
       run: () => setNow(Date.now()),
-      intervalMs: 30_000
+      intervalMs: viewMode === 'flow' ? 1_000 : 30_000
     })
-  }, [hasRelativeTimestamps])
+  }, [hasRelativeTimestamps, viewMode])
 
   useEffect(() => {
     const handleSearchShortcut = (event: KeyboardEvent): void => {
@@ -248,8 +277,42 @@ export function AgentKanbanBoard({
               count: visibleCards.length
             })}
           </span>
+          {onCreateTask ? (
+            <Button variant="outline" size="xs" onClick={() => setTaskDialogOpen(true)}>
+              <Plus className="mr-1 size-3.5" />
+              {translate('dashboardPopout.createTask', 'Create task')}
+            </Button>
+          ) : null}
+          <div className="ml-auto flex items-center rounded-md border border-border p-0.5">
+            <button
+              type="button"
+              aria-pressed={viewMode === 'board'}
+              onClick={() => setViewMode('board')}
+              className={cn(
+                'rounded px-2 py-1 text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                viewMode === 'board'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {translate('dashboardLiveFlow.view.board', 'Board')}
+            </button>
+            <button
+              type="button"
+              aria-pressed={viewMode === 'flow'}
+              onClick={() => setViewMode('flow')}
+              className={cn(
+                'rounded px-2 py-1 text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                viewMode === 'flow'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {translate('dashboardLiveFlow.view.flow', 'Live flow')}
+            </button>
+          </div>
           {headerActions || onClose ? (
-            <div className="ml-auto flex items-center gap-1">
+            <div className="flex items-center gap-1">
               {headerActions}
               {onClose ? (
                 <button
@@ -274,26 +337,41 @@ export function AgentKanbanBoard({
           onFiltersChange={setFilters}
           searchInputRef={searchInputRef}
         />
-        <div className="scrollbar-sleek flex min-h-0 flex-1 overflow-x-auto p-3">
-          {/* Auto margins center the capped board and collapse during horizontal overflow. */}
-          <div className="mx-auto flex w-full max-w-[1280px] gap-3">
-            {visibleBuckets.map((bucket) => (
-              <KanbanColumn
-                key={bucket}
-                bucket={bucket}
-                cards={grouped[bucket]}
-                repoIconsByRepoId={snapshot.repoIconsByRepoId}
-                now={now}
-                onOpenTerminal={handleOpenTerminal}
-              />
-            ))}
+        {viewMode === 'flow' ? (
+          <LiveAgentFlow cards={filteredCards} now={now} onOpen={handleOpenTerminal} />
+        ) : (
+          <div className="scrollbar-sleek flex min-h-0 flex-1 overflow-x-auto p-3">
+            {/* Auto margins center the capped board and collapse during horizontal overflow. */}
+            <div className="mx-auto flex w-full max-w-[1280px] gap-3">
+              {visibleBuckets.map((bucket) => (
+                <KanbanColumn
+                  key={bucket}
+                  bucket={bucket}
+                  cards={grouped[bucket]}
+                  repoIconsByRepoId={snapshot.repoIconsByRepoId}
+                  now={now}
+                  onOpenTerminal={handleOpenTerminal}
+                  collaborationUpdatesByPaneKey={collaborationUpdatesByPaneKey}
+                  collaborationErrorsByPaneKey={collaborationErrorsByPaneKey}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         <AgentTerminalDialog
           card={dialogCard}
           onOpenChange={handleDialogOpenChange}
           onReveal={onRevealAgent}
         />
+        {onCreateTask ? (
+          <MultiAgentTaskDialog
+            open={taskDialogOpen}
+            cards={visibleCards}
+            onOpenChange={setTaskDialogOpen}
+            onCreateTask={onCreateTask}
+            onCreated={trackRun}
+          />
+        ) : null}
       </div>
     </TooltipProvider>
   )

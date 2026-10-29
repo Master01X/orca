@@ -600,7 +600,32 @@
       "permissionOverrideMore": "and {{count}} more",
       "permissionOverrideMore_one": "and {{count}} more",
       "permissionOverrideMore_other": "and {{count}} more",
-      "permissionOverridesUse": "Use {{mode}}"
+      "permissionOverridesUse": "Use {{mode}}",
+      "profiles": {
+        "loadFailed": "Agent profiles could not be loaded.",
+        "fileTooLarge": "Agent profile JSON must be 64 KB or smaller.",
+        "importFailed": "Agent profile could not be imported.",
+        "title": "Custom agent profiles",
+        "description": "Import JSON profiles for Claude Code or Codex. Provider keys are entered here and encrypted with OS-backed safeStorage. OpenRouter, NVIDIA NIM, and OmniRoute can be used by entering their compatible model API endpoint.",
+        "chooseFile": "Choose a JSON agent profile",
+        "import": "Import JSON profile",
+        "loading": "Loading profiles…",
+        "empty": "No profiles yet. Import a JSON file with version, name, launcher, protocol, endpointUrl, and model. Keep API keys out of the file.",
+        "saveFailed": "Profile could not be saved.",
+        "selectFailed": "Profile could not be selected.",
+        "removeFailed": "Profile could not be removed.",
+        "jsonShape": "Profile JSON shape",
+        "jsonExample": "{\n  \"version\": 1,\n  \"name\": \"OpenRouter GPT\",\n  \"launcher\": \"codex\",\n  \"protocol\": \"openai-compatible\",\n  \"endpointUrl\": \"https://openrouter.ai/api/v1\",\n  \"model\": \"openai/gpt-4.1\"\n}",
+        "default": "Default for new launches",
+        "remove": "Remove {{name}}",
+        "endpoint": "Model API endpoint",
+        "model": "Model",
+        "apiKey": "Provider API key",
+        "keepKey": "(saved; leave blank to keep)",
+        "enterApiKey": "Enter an API key",
+        "useForLaunches": "Use for new launches",
+        "save": "Save profile"
+      }
     },
     "followSymlinkedDirectoriesKeywords": {
       "symlink": "symlink",
@@ -8417,7 +8442,8 @@
           "3ba07f933b": "Connect issue trackers Orca can use to browse tasks and start workspaces with linked context.",
           "70e885705b": "Task providers",
           "1683acbac4": "Connect the source hosts Orca can use for pull requests, merge requests, checks, and review status.",
-          "298c65ecac": "Review providers"
+          "298c65ecac": "Review providers",
+          "omniroute": "AI services"
         },
         "KagiSessionLinkForm": {
           "92f0b4e472": "Clear",
@@ -10946,7 +10972,13 @@
             "7166b9090c": "GitHub authentication via the gh CLI.",
             "f16e41cc72": "GitHub Integration",
             "760e2446e0": "Bitbucket Cloud authentication with a saved API token or environment variables.",
-            "af5ae87847": "access token"
+            "af5ae87847": "access token",
+            "omniroute": "OmniRoute Integration",
+            "omnirouteDescription": "Inspect configured OmniRoute deployments with read-only health, model catalog and rate-limit requests.",
+            "omnirouteKeyword": "omniroute",
+            "omnirouteStatus": "model catalog",
+            "omnirouteHealth": "rate limits",
+            "omnirouteIntegration": "integration"
           }
         },
         "jira": {
@@ -13713,6 +13745,40 @@
               "windowsFailureDescription": "Enable notifications for Orca in Windows Settings."
             }
           }
+        },
+        "orcaMode": {
+          "title": "Orca Mode",
+          "description": "Routes ordinary local web links inside Orca and puts the live dashboard on a secondary display. On Windows, Orca asks once before force-closing visible external apps in your session; unsaved work can be lost. Orca and protected system processes are excluded.",
+          "monitors": "dual monitor",
+          "browser": "internal browser",
+          "cleanup": "resource optimization"
+        },
+        "omniroute": {
+          "description": "Monitor deployment health, model catalog and rate limits. Custom agent profiles route inference only through the compatible endpoint you explicitly configure.",
+          "loading": "Loading",
+          "deploymentCount": "{{count}} deployments",
+          "addDeployment": "Add deployment",
+          "securityNote": "Requests use GET only. Bearer tokens are encrypted with OS safeStorage. A local cap of 60 requests per minute applies to each service.",
+          "retry": "Retry",
+          "serviceName": "Service name",
+          "baseUrl": "Base URL",
+          "exampleBaseUrl": "https://example.com",
+          "bearerToken": "Bearer token",
+          "keepToken": "Leave blank to keep the saved token",
+          "enterToken": "Enter token to enable authenticated endpoints",
+          "save": "Save",
+          "refresh": "Refresh health, models and rate limits",
+          "clearToken": "Clear token",
+          "remove": "Remove",
+          "cancel": "Cancel",
+          "tokenStored": "Bearer token stored with OS-backed encryption.",
+          "noToken": "No bearer token saved.",
+          "budget": "{{remaining}} of {{limit}} local requests remain in the current minute.",
+          "health": "Health",
+          "modelCatalog": "Model catalog",
+          "rateLimits": "Rate limits",
+          "httpStatus": "HTTP {{statusCode}}",
+          "unavailable": "Unavailable"
         }
       },
       "right": {
@@ -20692,7 +20758,9 @@
         "closed": "Closed review"
       },
       "subagents_one": "{{count}} subagent",
-      "subagents_other": "{{count}} subagents"
+      "subagents_other": "{{count}} subagents",
+      "collaboration": "Collaboration",
+      "recentAgentMessages": "Show recent agent messages"
     },
     "terminal": {
       "closed": "No live terminal — this agent's pane has closed.",
@@ -20730,7 +20798,8 @@
       "ssh": "SSH host",
       "remoteNamed": "Remote Orca host · {{host}}",
       "remote": "Remote Orca host"
-    }
+    },
+    "createTask": "Create task"
   },
   "dashboard": {
     "sidebar": {
@@ -20740,6 +20809,21 @@
       "closeActivity": "Turn off activity view",
       "projects": "Projects",
       "workspaces": "Workspaces"
+    },
+    "multiAgentTask": {
+      "startFailed": "Task could not be started.",
+      "title": "Start a multi-agent task",
+      "description": "Choose the primary agent. Orca creates a tracked Run and asks it to delegate bounded subtasks to available agents.",
+      "noAgents": "No active agent with a live terminal is available. Start an agent first.",
+      "primaryAgent": "Primary agent",
+      "task": "Task",
+      "objectivePlaceholder": "Describe the outcome and any constraints",
+      "starting": "Starting…",
+      "start": "Start task"
+    },
+    "collaboration": {
+      "reconnectFailed": "Could not reconnect to this agent’s task run.",
+      "refreshFailed": "Collaboration updates could not be refreshed."
     }
   },
   "runtimeRpc": {
@@ -21780,7 +21864,16 @@
     "refresh": "Refresh",
     "restartLocal": "Restart local daemon",
     "killAllLocal": "Kill all local sessions",
-    "killFailed": "The terminal could not be ended. Last-observed sessions are retained."
+    "killFailed": "The terminal could not be ended. Last-observed sessions are retained.",
+    "hostCpu": "Host CPU",
+    "hostCpuUnavailable": "Host CPU unavailable",
+    "hostRam": "Host RAM",
+    "hostRamUnavailable": "Host RAM unavailable",
+    "gpuUnavailable": "GPU unavailable",
+    "gpu": "GPU",
+    "gpuUtilizationUnavailable": "GPU utilization unavailable",
+    "gpuMemory": "VRAM",
+    "hostResourceUsage": "Host resource usage"
   },
   "browserExtensions": {
     "permission": {
@@ -21849,5 +21942,40 @@
     "ok": "OK",
     "unavailableMessage": "Orca can't stop every terminal session right now.",
     "unavailableDetail": "Nothing was stopped. Try again once your terminals have opened. If a terminal says it was opened in a newer version of Orca, reopen it first. If your terminals are already open, quit and reopen Orca, then try again."
+  },
+  "dashboardLiveFlow": {
+    "view": {
+      "board": "Board",
+      "flow": "Live flow"
+    },
+    "state": {
+      "attention": "Needs attention",
+      "monitoring": "Monitoring",
+      "working": "Working",
+      "done": "Done",
+      "idle": "Idle"
+    },
+    "duration": {
+      "unknown": "Duration unavailable",
+      "seconds": "{{count}}s active",
+      "minutes": "{{count}}m active",
+      "hours": "{{hours}}h {{minutes}}m active"
+    },
+    "message": {
+      "prompt": "Prompt",
+      "response": "Response"
+    },
+    "metrics": {
+      "label": "Live agent metrics",
+      "active": "Active agents",
+      "attention": "Needs attention",
+      "workspaces": "Active workspaces"
+    },
+    "empty": "No live agents or messages to visualize",
+    "workflow": {
+      "agentCount": "{{count}} agents"
+    },
+    "delegations": "Known delegation paths",
+    "messageScope": "Prompts and responses show each agent’s latest observed messages. Arrows show known parent/child delegation links, not message delivery."
   }
 }

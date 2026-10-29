@@ -27,6 +27,7 @@ import {
 } from './agent-availability-settings'
 import { AgentAvailabilityControl } from './AgentCatalogRow'
 import { AgentLaunchSettingsSection } from './AgentLaunchSettingsSection'
+import { CustomAgentProfilesSetting } from './CustomAgentProfilesSetting'
 import {
   AgentPermissionsSetting,
   type AgentPermissionsSettingProps
@@ -75,6 +76,7 @@ export function AgentsPane({
       />
       <section className="space-y-8">
         <SettingsSubsectionHeader title={getLocalExecutionHostLabel()} />
+        <CustomAgentProfilesSetting />
         <AgentRuntimeSetting
           settings={settings}
           updateSettings={updateSettings}

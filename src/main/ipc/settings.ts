@@ -43,6 +43,7 @@ import {
 } from '../../shared/computer-awake-mode'
 import { resolveAiVaultSearchSettings } from '../../shared/ai-vault-search-settings'
 import { applySessionSearchSettingsChange } from '../ai-vault-search/session-search-enablement'
+import { startBackgroundAppReviewOnEnable } from '../orca-mode/background-apps'
 
 const SETTINGS_CHANGED_WHITELIST_SET = new Set<string>(SETTINGS_CHANGED_WHITELIST)
 
@@ -122,7 +123,10 @@ export function registerSettingsHandlers(
     delete sanitizedArgs.activeRuntimeEnvironmentId
     // Only the main-process directory picker may grant trusted floating-workspace paths.
     delete sanitizedArgs.floatingTerminalTrustedCwds
-    if ('computerAwakeMode' in sanitizedArgs) {
+    if (
+      'computerAwakeMode' in sanitizedArgs ||
+      'keepComputerAwakeWhileAgentsRun' in sanitizedArgs
+    ) {
       Object.assign(
         sanitizedArgs,
         computerAwakeSettingsForMode(
@@ -131,11 +135,6 @@ export function registerSettingsHandlers(
             sanitizedArgs.keepComputerAwakeWhileAgentsRun
           )
         )
-      )
-    } else if ('keepComputerAwakeWhileAgentsRun' in sanitizedArgs) {
-      Object.assign(
-        sanitizedArgs,
-        computerAwakeSettingsForMode(sanitizedArgs.keepComputerAwakeWhileAgentsRun ? 'auto' : 'off')
       )
     }
     if (typeof args.floatingTerminalCwd === 'string') {
@@ -223,6 +222,7 @@ export function registerSettingsHandlers(
         normalizeComputerAwakeMode(result.computerAwakeMode, result.keepComputerAwakeWhileAgentsRun)
       )
     }
+    startBackgroundAppReviewOnEnable(before.orcaModeEnabled, result.orcaModeEnabled, event.sender)
     await getClaudeAgentViewService().reconcile(result)
     const hookSettingChanged =
       ('agentStatusHooksEnabled' in sanitizedArgs &&

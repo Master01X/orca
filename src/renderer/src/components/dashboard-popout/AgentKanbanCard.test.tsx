@@ -53,6 +53,14 @@ function renderCard(props: {
   now: number
   repoIcon?: RepoIcon | null
   onOpenTerminal?: () => void
+  collaborationUpdates?: {
+    id: string
+    from_handle: string
+    subject: string
+    body: string
+    type: string
+    created_at: string
+  }[]
 }): ReturnType<typeof render> {
   return render(
     <TooltipProvider>
@@ -60,6 +68,7 @@ function renderCard(props: {
         card={props.card}
         repoIcon={props.repoIcon}
         now={props.now}
+        collaborationUpdates={props.collaborationUpdates}
         onOpenTerminal={props.onOpenTerminal ?? vi.fn()}
       />
     </TooltipProvider>
@@ -127,6 +136,8 @@ describe('AgentKanbanCard', () => {
     const onOpenTerminal = vi.fn()
     renderCard({
       card: card({
+        bucket: 'idle',
+        dotState: 'idle',
         review: { number: 11012, state: 'open' },
         subagents: [
           { id: 'child-1', name: 'Review loop', dotState: 'working' },
@@ -146,10 +157,59 @@ describe('AgentKanbanCard', () => {
     expect(onOpenTerminal).not.toHaveBeenCalled()
   })
 
+  it('shows subagents and actual Run messages directly in the Working card', () => {
+    renderCard({
+      card: card({
+        subagents: [{ id: 'child-1', name: 'Test worker', dotState: 'working' }]
+      }),
+      now: 2_000,
+      collaborationUpdates: [
+        {
+          id: 'message-1',
+          from_handle: 'worker-1',
+          subject: 'Tests complete',
+          body: 'All targeted tests passed.',
+          type: 'status',
+          created_at: '2025-01-01T00:00:00.000Z'
+        }
+      ]
+    })
+
+    expect(screen.getByText('Collaboration')).toBeInTheDocument()
+    expect(screen.getByText('Test worker')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Show recent agent messages'))
+    expect(screen.getByText('worker-1: Tests complete')).toBeInTheDocument()
+    expect(screen.getByText('All targeted tests passed.')).toBeInTheDocument()
+  })
+
+  it('shows collaboration updates directly in the Done card', () => {
+    renderCard({
+      card: card({ bucket: 'done', dotState: 'done' }),
+      now: 2_000,
+      collaborationUpdates: [
+        {
+          id: 'message-2',
+          from_handle: 'primary',
+          subject: 'Task completed',
+          body: 'Reviewed worker output.',
+          type: 'status',
+          created_at: '2025-01-01T00:00:00.000Z'
+        }
+      ]
+    })
+
+    expect(screen.getByText('Collaboration')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Show recent agent messages'))
+    expect(screen.getByText('primary: Task completed')).toBeInTheDocument()
+    expect(screen.getByText('Reviewed worker output.')).toBeInTheDocument()
+  })
+
   it('opens the terminal from the footer while keeping subagent disclosure isolated', () => {
     const onOpenTerminal = vi.fn()
     renderCard({
       card: card({
+        bucket: 'idle',
+        dotState: 'idle',
         conversationName: 'Dashboard review',
         review: { number: 11042, state: 'open' },
         subagents: [{ id: 'child-1', name: 'Review loop', dotState: 'working' }]
@@ -168,6 +228,8 @@ describe('AgentKanbanCard', () => {
   it('labels one subagent accessibly and never renders a workspace-status dot', () => {
     renderCard({
       card: card({
+        bucket: 'idle',
+        dotState: 'idle',
         workspaceStatusId: 'in-review',
         workspaceStatusLabel: 'In review',
         workspaceStatusColor: 'emerald',

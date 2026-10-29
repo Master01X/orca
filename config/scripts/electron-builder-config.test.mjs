@@ -307,6 +307,41 @@ describe('electron-builder config', () => {
     ).toBe(true)
   })
 
+  it('unpacks the bundled skill installer entry and its relative runtime imports', () => {
+    const matcher = new FileMatcher(
+      '/app',
+      '/dest',
+      (value) => value,
+      electronBuilderConfig.asarUnpack
+    )
+    const isUnpacked = matcher.createFilter()
+    for (const file of [
+      'cli-entry.js',
+      'local-host.js',
+      'targets.js',
+      'bundled-skill-sources.js'
+    ]) {
+      expect(
+        isUnpacked(join('/app', 'out', 'main', 'skills', 'bundled-skill-install', file), {
+          isDirectory: () => false
+        })
+      ).toBe(true)
+    }
+    expect(
+      isUnpacked(join('/app', 'out', 'main', 'skills', 'skill-provider-destinations.js'), {
+        isDirectory: () => false
+      })
+    ).toBe(true)
+  })
+
+  it('ships the hash dependency used by the Node-mode skills CLI', () => {
+    expect(
+      electronBuilderConfig.win.extraResources.some(
+        ({ to }) => to.replace(/\\/g, '/') === 'node_modules/@noble/hashes'
+      )
+    ).toBe(true)
+  })
+
   // Swept one-time /tmp asar extracts cause web-client 500s and phone bundle failures until restart (#27976).
   it('unpacks the web and mobile bundles a host serves by opening their files', () => {
     const matcher = new FileMatcher(

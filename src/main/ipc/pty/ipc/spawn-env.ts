@@ -63,6 +63,7 @@ export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<voi
       launchConfig: args.launchConfig
     })
   ctx.effectiveLaunchConfig = args.launchConfig
+  ctx.customAgentLaunchProfile ??= ctx.deps.getCustomAgentLaunchProfile?.(args.launchAgent) ?? null
   const shouldPreAllocateTerminalHandle =
     ctx.deps.runtime !== undefined &&
     ((!(ctx.provider instanceof LocalPtyProvider) &&
@@ -85,6 +86,7 @@ export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<voi
       ...ctx.baseEnv,
       ...prepared.env
     }
+
     if (args.launchConfig) {
       ctx.effectiveLaunchConfig = {
         ...args.launchConfig,
@@ -119,6 +121,30 @@ export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<voi
   ctx.validatedLeafId = ctx.verifiedLeafId ?? ctx.metadataLeafId
   ctx.spawnTiming.mark('pane_env')
   await assemblePtyIpcSpawnCodexEnv(ctx)
+  if (ctx.customAgentLaunchProfile) {
+    const profile = ctx.customAgentLaunchProfile
+    const profileEnv: Record<string, string> =
+      profile.protocol === 'anthropic'
+        ? {
+            ANTHROPIC_BASE_URL: profile.endpointUrl,
+            ANTHROPIC_API_KEY: profile.apiKey,
+            ANTHROPIC_MODEL: profile.model
+          }
+        : {
+            OPENAI_BASE_URL: profile.endpointUrl,
+            OPENAI_API_KEY: profile.apiKey,
+            OPENAI_MODEL: profile.model
+          }
+    ctx.baseEnv = { ...ctx.baseEnv, ...profileEnv }
+    ctx.env = { ...ctx.env, ...profileEnv }
+    if (ctx.effectiveLaunchConfig) {
+      ctx.effectiveLaunchConfig = {
+        ...ctx.effectiveLaunchConfig,
+        agentEnv: { ...ctx.effectiveLaunchConfig.agentEnv, ...profileEnv },
+        agentArgs: withProfileModel(ctx.effectiveLaunchConfig.agentArgs, profile.model)
+      }
+    }
+  }
   await prepareAntigravityAccountForLaunch({
     launchAgent: args.launchAgent,
     command: args.command ?? args.launchConfig?.agentCommand,
@@ -127,4 +153,12 @@ export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<voi
     env: ctx.spawnEnv ?? ctx.baseEnv,
     envToDelete: args.envToDelete
   })
+}
+
+function withProfileModel(agentArgs: string | null | undefined, model: string): string {
+  const existing = agentArgs?.trim() ?? ''
+  if (/(?:^|\s)--model(?:\s|=)/.test(existing)) {
+    return existing
+  }
+  return `${existing} --model ${model}`.trim()
 }

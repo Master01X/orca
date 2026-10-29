@@ -23,6 +23,14 @@ export type ProcessCommitMetric = 'private-bytes'
 
 export type HostAvailableMemorySource = 'memory-pressure' | 'proc-meminfo' | 'free-memory'
 
+export type HostGpuMetrics = {
+  /** null means the provider could not report utilization; it is never inferred from process data. */
+  utilizationPercent: number | null
+  memoryUsed: number | null
+  memoryTotal: number | null
+  source: 'nvidia-smi' | 'unavailable'
+}
+
 /** The top-level cpu/memory are the sum of main + renderer + other. */
 export type AppMemory = UsageValues & {
   main: UsageValues
@@ -59,6 +67,10 @@ export type HostMemory = {
   /** totalMemory - availableMemory. */
   usedMemory: number
   memoryUsagePercent: number
+  /** Whole-host utilization since the preceding sample; absent on snapshots from older hosts. */
+  cpuUsagePercent?: number | null
+  /** Best-effort hardware telemetry; absent on snapshots from older hosts. */
+  gpu?: HostGpuMetrics
   cpuCoreCount: number
   loadAverage1m: number
 }

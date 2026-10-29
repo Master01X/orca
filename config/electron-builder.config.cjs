@@ -1,6 +1,6 @@
 const { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync } = require('node:fs')
 const { execFileSync } = require('node:child_process')
-const { join, resolve } = require('node:path')
+const { join, relative, resolve, sep } = require('node:path')
 const {
   MACOS_FOLDER_USAGE_DESCRIPTIONS,
   applyMacHelperFolderUsageDescriptions
@@ -60,7 +60,10 @@ const {
   orcadTemplateNodeModulesExtraResource,
   orcadTemplateMacSignIgnore
 } = require('./scripts/packaged-orcad-template.cjs')
-const { verifySkillsCliRuntime } = require('./scripts/verify-skills-cli-runtime.cjs')
+const {
+  collectRuntimeClosure: collectSkillsCliRuntimeClosure,
+  verifySkillsCliRuntime
+} = require('./scripts/verify-skills-cli-runtime.cjs')
 const { assertNotDarkBuild } = require('./dark-build-switches.cjs')
 const { verifyStaticAppImagePackage } = require('./scripts/static-appimage-package-contract.cjs')
 const {
@@ -70,6 +73,14 @@ const {
 } = require('./scripts/appimage-node-runtime.cjs')
 const { signWindowsUninstallerViaSignPath } = require('./scripts/windows-uninstaller-signing.cjs')
 const { buildMacShipItScheduling } = require('./scripts/macos-shipit-scheduling.cjs')
+const projectDir = resolve(__dirname, '..')
+const outDir = join(projectDir, 'out')
+// The Node-mode skills CLI and its dependencies load from real paths outside app.asar.
+const skillsCliRuntimeUnpack = existsSync(join(outDir, 'cli', 'index.js'))
+  ? collectSkillsCliRuntimeClosure(outDir)
+      .map((file) => relative(projectDir, file).split(sep).join('/'))
+      .filter((file) => file.startsWith('out/main/'))
+  : []
 
 // Dev channels need release bundle ID/signature/notarization so Squirrel.Mac accepts updates and macOS retains app identity.
 const isMacHourly = process.env.ORCA_MAC_HOURLY === '1'
@@ -319,6 +330,7 @@ module.exports = {
     'out/package.json',
     'out/cli/**',
     'out/shared/**',
+    ...skillsCliRuntimeUnpack,
     'out/main/agent-hooks/**',
     'out/main/antigravity/**',
     'out/main/claude/**',
@@ -334,7 +346,7 @@ module.exports = {
     'out/main/macos-tree-clone.js',
     'out/main/orca-profiles/profile-index-store.js',
     'out/main/persistence/profile-state/**',
-    'out/main/skills/bundled-skill-install/cli-entry.js',
+    'out/main/skills/**',
     'out/main/startup/http1-compatibility-marker.js',
     'out/main/daemon-entry.js',
     'out/main/session-scanner-service-entry.js',

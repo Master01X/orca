@@ -22,6 +22,7 @@ import {
 } from './resource-usage-popover-body'
 import { renderResourceUsageKillDialog } from './resource-usage-kill-dialog'
 import { WorkspaceSpaceCompactPanel } from './WorkspaceSpaceCompactPanel'
+import { HostResourceMetrics } from './HostResourceMetrics'
 
 export { SessionRow, WorktreeRow } from './resource-usage-session-rows'
 
@@ -164,6 +165,7 @@ export function ResourceUsageStatusSegment({
                 commitToneClass,
                 orphanCount
               })}
+            {resourceSnapshot && <HostResourceMetrics host={resourceSnapshot.host} />}
             {renderResourceUsagePopoverBody({
               setPopoverBodyNode,
               unifiedRepos,

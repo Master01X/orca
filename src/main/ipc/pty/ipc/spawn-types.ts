@@ -2,6 +2,7 @@ import type { PtySpawnOutcome } from '../spawn-outcome'
 import type { PaneSpawnReservation } from '../pane/spawn-reservation'
 import type { PaneSpawnOperation } from '../pane/pane-spawn-operation'
 import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { CustomAgentLaunchProfile } from '../../../../shared/custom-agent-profiles'
 import type {
   AgentProviderSessionMetadata,
   SleepingAgentLaunchConfig
@@ -107,6 +108,7 @@ export type PtySpawnIpcDeps = PtySpawnCodexResumeDeps & {
   runtime?: OrcaRuntimeService
   store?: Store
   getSettings?: () => GlobalSettings
+  getCustomAgentLaunchProfile?: (agent: TuiAgent | undefined) => CustomAgentLaunchProfile | null
   getSelectedCodexHomePath?: GetSelectedCodexHomePath
   prepareClaudeAuth?: PrepareClaudeAuth
   options?: {

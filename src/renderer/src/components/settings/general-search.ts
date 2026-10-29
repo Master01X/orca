@@ -136,6 +136,22 @@ export const getGeneralNavigationSearchEntries = createLocalizedCatalog(() => [
     ]
   },
   {
+    title: translate('auto.components.settings.orcaMode.title', 'Orca Mode'),
+    description: translate(
+      'auto.components.settings.orcaMode.description',
+      'Routes ordinary local web links inside Orca and puts the live dashboard on a secondary display. On Windows, Orca asks once before force-closing visible external apps in your session; unsaved work can be lost. Orca and protected system processes are excluded.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.orcaMode.title', 'orca mode'),
+      ...translateSearchKeyword('auto.components.settings.orcaMode.monitors', 'dual monitor'),
+      ...translateSearchKeyword('auto.components.settings.orcaMode.browser', 'internal browser'),
+      ...translateSearchKeyword(
+        'auto.components.settings.orcaMode.cleanup',
+        'resource optimization'
+      )
+    ]
+  },
+  {
     title: translate(
       'auto.components.settings.GeneralPane.editor_preview_tabs',
       'Reuse a preview tab when browsing files'

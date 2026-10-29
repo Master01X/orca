@@ -21,6 +21,10 @@ import {
 import type { RepoIcon } from '../../../../shared/repo-icon'
 import { translate } from '@/i18n/i18n'
 import { DashboardHostBadge } from './DashboardHostBadge'
+import type { DashboardCollaborationMessage } from '../dashboard/multiagent-task'
+import { DashboardCardCollaboration } from './DashboardCardCollaboration'
+
+const EMPTY_COLLABORATION_UPDATES: DashboardCollaborationMessage[] = []
 
 function formatStartedAgo(startedAt: number, now: number): string {
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000))
@@ -76,6 +80,25 @@ function sameSubagents(a: DashboardCard['subagents'], b: DashboardCard['subagent
     }
   }
   return true
+}
+
+function sameCollaborationUpdates(
+  a: DashboardCollaborationMessage[],
+  b: DashboardCollaborationMessage[]
+): boolean {
+  return (
+    a === b ||
+    (a.length === b.length &&
+      a.every(
+        (message, index) =>
+          message.id === b[index]?.id &&
+          message.from_handle === b[index]?.from_handle &&
+          message.subject === b[index]?.subject &&
+          message.body === b[index]?.body &&
+          message.type === b[index]?.type &&
+          message.created_at === b[index]?.created_at
+      ))
+  )
 }
 
 function sameCard(a: DashboardCard, b: DashboardCard): boolean {
@@ -185,6 +208,8 @@ type AgentKanbanCardProps = {
   /** The card repo's icon. null renders the default folder glyph. */
   repoIcon?: RepoIcon | null
   now: number
+  collaborationUpdates?: DashboardCollaborationMessage[]
+  collaborationError?: string
   /** Host dialogs on the board because bucket moves remount cards and would close an embedded conversation. */
   onOpenTerminal: (card: DashboardCard) => void
 }
@@ -194,14 +219,18 @@ export const AgentKanbanCard = memo(
     card,
     repoIcon = null,
     now,
+    collaborationUpdates: collaborationUpdatesProp,
+    collaborationError,
     onOpenTerminal
   }: AgentKanbanCardProps): React.JSX.Element {
     useTranslation()
     const [subagentsOpen, setSubagentsOpen] = useState(false)
+    const collaborationUpdates = collaborationUpdatesProp ?? EMPTY_COLLABORATION_UPDATES
     // Tint only attention and done so scan-worthy outcomes retain distinct meaning.
     const needsYou = card.bucket === 'attention'
     const displayState = dashboardCardDisplayState(card)
     const isDone = displayState === 'done'
+    const showCollaboration = card.bucket === 'working' || card.bucket === 'done'
     // Prefer the conversation heading; otherwise use the worktree once and omit its duplicate footer.
     const heading = card.conversationName ?? card.worktreeName
     const worktreeInFooter = card.conversationName !== undefined
@@ -273,7 +302,16 @@ export const AgentKanbanCard = memo(
           ) : null}
         </button>
 
-        {card.subagents?.length ? (
+        {showCollaboration &&
+        (collaborationUpdates.length > 0 || card.subagents?.length || collaborationError) ? (
+          <DashboardCardCollaboration
+            subagents={card.subagents}
+            updates={collaborationUpdates}
+            error={collaborationError}
+          />
+        ) : null}
+
+        {!showCollaboration && card.subagents?.length ? (
           <>
             <button
               type="button"
@@ -340,6 +378,11 @@ export const AgentKanbanCard = memo(
   (previous, next) =>
     previous.onOpenTerminal === next.onOpenTerminal &&
     sameCard(previous.card, next.card) &&
+    sameCollaborationUpdates(
+      previous.collaborationUpdates ?? EMPTY_COLLABORATION_UPDATES,
+      next.collaborationUpdates ?? EMPTY_COLLABORATION_UPDATES
+    ) &&
+    previous.collaborationError === next.collaborationError &&
     sameRepoIcon(previous.repoIcon, next.repoIcon) &&
     (displayTimestamp(previous.card) <= 0 ||
       formatStartedAgo(displayTimestamp(previous.card), previous.now) ===

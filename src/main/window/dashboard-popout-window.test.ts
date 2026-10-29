@@ -54,6 +54,9 @@ const {
     })
     loadURL = vi.fn()
     loadFile = vi.fn()
+    setBounds = vi.fn((bounds: { x: number; y: number; width: number; height: number }) => {
+      this.bounds = bounds
+    })
     close = vi.fn(() => {
       this.destroyed = true
       this.emit('close')
@@ -228,6 +231,18 @@ describe('createOrFocusDashboardPopout', () => {
     expect(permissionCallback).toHaveBeenCalledWith(false)
     expect(session.setPermissionCheckHandler.mock.calls[0][0]()).toBe(false)
     expect(sendToTrustedUIRendererMock).toHaveBeenCalledWith('dashboard:popoutOpenChanged', true)
+  })
+
+  it('uses the selected secondary display bounds when requested by Orca Mode', () => {
+    const bounds = { x: 1920, y: 0, width: 2560, height: 1440 }
+    createOrFocusDashboardPopout(null, { dashboardDisplayBounds: bounds })
+
+    expect(instances[0].options).toMatchObject({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    })
   })
 
   it('shows the window on ready-to-show', () => {
